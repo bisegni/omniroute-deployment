@@ -13,7 +13,7 @@ no_cache=false
 
 usage() {
   cat <<'EOF'
-Usage: build-omniroute-3.8.51.sh [options]
+Usage: build-omniroute.sh [options]
 
 Downloads the OmniRoute source, builds the official Docker runner, and loads
 the resulting image into Docker. It does not start Docker Compose.
