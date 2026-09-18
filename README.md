@@ -3,7 +3,8 @@
 Runs [OmniRoute](https://github.com/diegosouzapw/OmniRoute) as a local model
 router in front of two backends:
 
-- **SLAC** — your org's LiteLLM instance at `ai-api.slac.stanford.edu`,
+- **SLAC** — your org's LiteLLM instance at the hostname in
+  `SLAC_API_HOSTNAME` (default: `ai-api.slac.stanford.edu`),
   reached through an SSH tunnel (mirrors the `slac` provider in the main
   `gateway.yaml`).
 - **GitHub Copilot** — connected natively through OmniRoute's OAuth flow (no
@@ -44,6 +45,7 @@ Edit `.env`:
 | `OMNIROUTE_STORAGE_ENCRYPTION_KEY` | A long random string used to encrypt the SQLite data at rest. Keep it safe: losing it makes stored credentials unrecoverable. |
 | `OMNIROUTE_MACHINE_ID_SALT` | A unique random string for this deployment. |
 | `OMNIROUTE_WS_BRIDGE_SECRET` | A long random string for the Responses/WebSocket bridge. |
+| `SLAC_API_HOSTNAME` | SLAC LiteLLM hostname used by the optional SSH tunnel and TLS alias; default `ai-api.slac.stanford.edu`. |
 | `SLAC_API_KEY` | `cat ~/.bedrock-api-key` — paste the contents. |
 
 Generate the five random values with `openssl rand -hex 32`. Do not rotate the
@@ -97,13 +99,13 @@ ssh -N -L 20128:127.0.0.1:20128 <this-host>
 
 | Field | Value |
 |---|---|
-| Base URL | `https://ai-api.slac.stanford.edu:8443` |
+| Base URL | `https://<SLAC_API_HOSTNAME>:8443` |
 | API Key | value of `SLAC_API_KEY` (copy from `.env`) |
 | TLS verify | on |
 
-The tunnel service has an internal Docker network alias for
-`ai-api.slac.stanford.edu`. Use that hostname so the TLS SNI and certificate
-match while traffic is still routed to the tunnel container on port `8443`.
+The tunnel service has an internal Docker network alias matching
+`SLAC_API_HOSTNAME`. Use that hostname so the TLS SNI and certificate match
+while traffic is still routed to the tunnel container on port `8443`.
 
 ## 5. Connect GitHub Copilot
 

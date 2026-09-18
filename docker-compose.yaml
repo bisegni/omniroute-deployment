@@ -1,6 +1,33 @@
 services:
+  # Optional SLAC SSH tunnel. Uncomment this entire block and the depends_on
+  # block below only when the tunnel is needed.
+  # tunnel:
+  #   image: alpine:3.20
+  #   entrypoint: ["sh", "-c"]
+  #   environment:
+  #     AUTOSSH_MAXSTART: "2"
+  #   command:
+  #     - |
+  #       apk add --no-cache autossh openssh-client >/dev/null
+  #       exec autossh -M 0 -N -o ExitOnForwardFailure=yes \
+  #         -o StrictHostKeyChecking=accept-new \
+  #         -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+  #         -L 0.0.0.0:8443:${SLAC_API_HOSTNAME:-ai-api.slac.stanford.edu}:443 \
+  #         -o IdentitiesOnly=yes \
+  #         -i /ssh/s3df/SHA256:zUfE3xAHiPadt2p6QCGv3TQAIyqPDzZgW.jTD9cVTFw \
+  #         -F /ssh/config s3df
+  #   volumes:
+  #     - ~/.ssh:/ssh:ro
+  #   networks:
+  #     omniroute-net:
+  #       aliases:
+  #         - ${SLAC_API_HOSTNAME:-ai-api.slac.stanford.edu}
+  #   restart: "no"
+
   omniroute:
     image: diegosouzapw/omniroute:${OMNIROUTE_VERSION:-latest}
+    # depends_on:
+    #   - tunnel
     # OmniRoute 3.8.49 declares USER node but omits that user from /etc/passwd.
     # Use its standard non-root UID/GID without starting any dependency.
     user: "1000:1000"
