@@ -1,38 +1,6 @@
 services:
-  # SSH port-forward to the org LiteLLM instance at ai-api.slac.stanford.edu,
-  # matching gateway.yaml's providers.slac ssh_tunnel block.  The mounted SSH
-  # config includes a host-side path, so select the mounted SLAC key explicitly.
-  tunnel:
-    image: alpine:3.20
-    entrypoint: ["sh", "-c"]
-    environment:
-      # One initial SSH start plus two retries.  Do not remove this limit:
-      # repeated bad credentials can trigger account lockout policies.
-      AUTOSSH_MAXSTART: "2"
-    command:
-      - |
-        apk add --no-cache autossh openssh-client >/dev/null
-        exec autossh -M 0 -N -o ExitOnForwardFailure=yes \
-          -o StrictHostKeyChecking=accept-new \
-          -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
-          -L 0.0.0.0:8443:ai-api.slac.stanford.edu:443 \
-          -o IdentitiesOnly=yes \
-          -i /ssh/s3df/SHA256:zUfE3xAHiPadt2p6QCGv3TQAIyqPDzZgW.jTD9cVTFw \
-          -F /ssh/config s3df
-    volumes:
-      - ~/.ssh:/ssh:ro
-    networks:
-      omniroute-net:
-        aliases:
-          - ai-api.slac.stanford.edu
-    # autossh exits after its three allowed starts; never let Compose reset
-    # that counter by restarting the tunnel container.
-    restart: "no"
-
   omniroute:
     image: diegosouzapw/omniroute:${OMNIROUTE_VERSION:-latest}
-    depends_on:
-      - tunnel
     # OmniRoute 3.8.49 declares USER node but omits that user from /etc/passwd.
     # Use its standard non-root UID/GID without starting any dependency.
     user: "1000:1000"

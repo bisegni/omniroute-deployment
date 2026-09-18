@@ -42,7 +42,7 @@ fi
 pick_model() {
   local family="$1"
 
-  printf '%s\n' "${github_claude_models}" | jq -R -s --arg family "${family}" '
+  printf '%s\n' "${github_claude_models}" | jq -r -R -s --arg family "${family}" '
     split("\n")
     | map(select(length > 0))
     | map(select(test("^(gh|github)/claude-" + $family + "(-|$)"; "i")))
