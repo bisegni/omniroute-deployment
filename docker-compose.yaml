@@ -1,0 +1,72 @@
+services:
+  # SSH port-forward to the org LiteLLM instance at ai-api.slac.stanford.edu,
+  # matching gateway.yaml's providers.slac ssh_tunnel block.  The mounted SSH
+  # config includes a host-side path, so select the mounted SLAC key explicitly.
+  tunnel:
+    image: alpine:3.20
+    entrypoint: ["sh", "-c"]
+    environment:
+      # One initial SSH start plus two retries.  Do not remove this limit:
+      # repeated bad credentials can trigger account lockout policies.
+      AUTOSSH_MAXSTART: "2"
+    command:
+      - |
+        apk add --no-cache autossh openssh-client >/dev/null
+        exec autossh -M 0 -N -o ExitOnForwardFailure=yes \
+          -o StrictHostKeyChecking=accept-new \
+          -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+          -L 0.0.0.0:8443:ai-api.slac.stanford.edu:443 \
+          -o IdentitiesOnly=yes \
+          -i /ssh/s3df/SHA256:zUfE3xAHiPadt2p6QCGv3TQAIyqPDzZgW.jTD9cVTFw \
+          -F /ssh/config s3df
+    volumes:
+      - ~/.ssh:/ssh:ro
+    networks:
+      omniroute-net:
+        aliases:
+          - ai-api.slac.stanford.edu
+    # autossh exits after its three allowed starts; never let Compose reset
+    # that counter by restarting the tunnel container.
+    restart: "no"
+
+  omniroute:
+    image: diegosouzapw/omniroute:${OMNIROUTE_VERSION:-latest}
+    depends_on:
+      - tunnel
+    # OmniRoute 3.8.49 declares USER node but omits that user from /etc/passwd.
+    # Use its standard non-root UID/GID without starting any dependency.
+    user: "1000:1000"
+    ports:
+      - "20128:20128"
+    stop_grace_period: 40s
+    volumes:
+      - omniroute-data:/app/data
+    environment:
+      NODE_ENV: production
+      PORT: 20128
+      DATA_DIR: /app/data
+      # The NINEROUTER_* fallbacks keep an existing checkout startable once;
+      # migrate those names to the OMNIROUTE_* values in .env when convenient.
+      INITIAL_PASSWORD: ${OMNIROUTE_INITIAL_PASSWORD:-${NINEROUTER_INITIAL_PASSWORD:?set OMNIROUTE_INITIAL_PASSWORD in .env}}
+      JWT_SECRET: ${OMNIROUTE_JWT_SECRET:-${NINEROUTER_JWT_SECRET:?set OMNIROUTE_JWT_SECRET in .env}}
+      API_KEY_SECRET: ${OMNIROUTE_API_KEY_SECRET:-${NINEROUTER_JWT_SECRET:?set OMNIROUTE_API_KEY_SECRET in .env}}
+      STORAGE_ENCRYPTION_KEY: ${OMNIROUTE_STORAGE_ENCRYPTION_KEY:-}
+      STORAGE_ENCRYPTION_KEY_VERSION: v1
+      MACHINE_ID_SALT: ${OMNIROUTE_MACHINE_ID_SALT:-endpoint-proxy-salt}
+      OMNIROUTE_WS_BRIDGE_SECRET: ${OMNIROUTE_WS_BRIDGE_SECRET:-${NINEROUTER_JWT_SECRET:?set OMNIROUTE_WS_BRIDGE_SECRET in .env}}
+      BASE_URL: http://127.0.0.1:20128
+      NEXT_PUBLIC_BASE_URL: ${OMNIROUTE_PUBLIC_BASE_URL:-http://127.0.0.1:20128}
+      APP_LOG_TO_FILE: "true"
+      AUTH_COOKIE_SECURE: "false"
+      REQUIRE_API_KEY: "true"
+      CORS_ORIGIN: ${OMNIROUTE_PUBLIC_BASE_URL:-http://127.0.0.1:20128}
+    networks:
+      - omniroute-net
+    restart: unless-stopped
+
+networks:
+  omniroute-net:
+    driver: bridge
+
+volumes:
+  omniroute-data:

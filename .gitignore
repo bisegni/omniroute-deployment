@@ -1,0 +1,31 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# Project-local memory and runtime state
+.memory/
+*.log
+*.pid
+*.tmp
+
+# Local SSH material and generated credentials
+.ssh/
+*.pem
+*.key
+
+# macOS, editor, and IDE metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build and dependency output
+node_modules/
+dist/
+build/
+coverage/
