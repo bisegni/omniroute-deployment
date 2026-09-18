@@ -16,9 +16,11 @@ talking to providers directly.
 ## Prerequisites
 
 - Docker + Docker Compose.
-- `~/.ssh/config` has a working SSH host entry matching `TUNNEL_SSH_HOST` (the
-  example uses `s3df`), with your key/agent already set up.
-- Your SLAC bearer token, i.e. the contents of `~/.bedrock-api-key`.
+- If you enable the optional tunnel, `~/.ssh/config` must have a working SSH
+  host entry matching `TUNNEL_SSH_HOST` (the example uses `s3df`), with your
+  key/agent already set up.
+- If you enable the tunneled provider, you need its bearer token, i.e. the
+  contents of `~/.bedrock-api-key`.
 
 ## 1. Configure
 
@@ -33,6 +35,10 @@ overwriting it. The Compose file temporarily accepts the old
 `OMNIROUTE_*` names in `.env.example` are recommended. Add independent values
 for the API-key, storage-encryption, machine-salt, and WebSocket secrets.
 
+If upgrading from an earlier checkout, rename `SLAC_API_HOSTNAME` to
+`TUNNELED_API_HOSTNAME` and `SLAC_API_KEY` to `TUNNELED_API_KEY` in your local
+`.env`, preserving their values.
+
 Edit `.env`:
 
 | Variable | What to put |
@@ -46,9 +52,9 @@ Edit `.env`:
 | `OMNIROUTE_WS_BRIDGE_SECRET` | A long random string for the Responses/WebSocket bridge. |
 | `TUNNELED_API_HOSTNAME` | Upstream API hostname used by the optional SSH tunnel and TLS alias; default `ai-api.slac.stanford.edu`. |
 | `TUNNELED_API_KEY` | Upstream API key used when adding the tunneled provider; `cat ~/.bedrock-api-key` and paste the contents. |
-| `TUNNEL_SSH_IDENTITY_FILE` | Identity file path inside the tunnel container; the example uses the mounted `/ssh` tree. |
-| `TUNNEL_SSH_CONFIG` | SSH config path inside the tunnel container; default example `/ssh/config`. |
-| `TUNNEL_SSH_HOST` | SSH host entry from the mounted config; default example `s3df`. |
+| `TUNNEL_SSH_IDENTITY_FILE` | Required identity file path inside the tunnel container, normally under the mounted `/ssh` tree. |
+| `TUNNEL_SSH_CONFIG` | Required SSH config path inside the tunnel container. |
+| `TUNNEL_SSH_HOST` | Required SSH host entry from the mounted config; the example uses `s3df`. |
 
 Generate the five random values with `openssl rand -hex 32`. Do not rotate the
 storage-encryption key after the first start unless you have a migration plan.
@@ -66,12 +72,21 @@ Check OmniRoute came up:
 docker compose ps
 ```
 
+The SSH tunnel is disabled by default. To enable it, populate the `TUNNEL_*`
+variables in `.env`, uncomment the complete `tunnel` block at the top of
+`docker-compose.yaml`, and uncomment `omniroute.depends_on`. Then recreate the
+services:
+
+```bash
+docker compose up -d --force-recreate
+```
+
 If you enable the optional tunnel block, verify both `omniroute` and `tunnel`
 are running.
 
 If `tunnel` stops, check `docker compose logs tunnel` — usually this means
-`s3df` isn't resolvable/reachable from the container, or the mounted `~/.ssh`
-doesn't have the right permissions/identity file.
+`$TUNNEL_SSH_HOST` isn't resolvable/reachable from the container, or the
+mounted `~/.ssh` doesn't have the right permissions/identity file.
 
 The tunnel is intentionally limited to one initial SSH attempt plus two
 retries. After that it stops and requires an explicit `docker compose up -d
@@ -194,8 +209,8 @@ branch is available. Build the official `runner-base` image locally for Apple
 Silicon with:
 
 ```bash
-chmod +x ./build-omniroute-3.8.51.sh
-./build-omniroute-3.8.51.sh
+chmod +x ./build-omniroute.sh
+./build-omniroute.sh
 ```
 
 The script updates `OMNIROUTE_VERSION=3.8.51-local` in `.env` automatically.
@@ -203,7 +218,7 @@ The default source branch is `release/v3.8.51`; select another branch when
 needed with `--branch`:
 
 ```bash
-./build-omniroute-3.8.51.sh --branch release/v3.9.0
+./build-omniroute.sh --branch release/v3.9.0
 ```
 
 After the build completes, start only OmniRoute when ready:
