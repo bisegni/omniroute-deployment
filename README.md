@@ -164,12 +164,15 @@ ANTHROPIC_DEFAULT_OPUS_MODEL=github/claude-opus-4.7 \
 To start Codex with OmniRoute injected through temporary `-c` overrides:
 
 ```bash
-./start-codex-omniroute.sh --model gpt-5.5
+./start-codex-omniroute.sh --model github/gpt-5.5
 ```
 
 The Codex script does not modify `~/.codex/config.toml`. It fetches and
 validates the live `/v1/models` catalog, then injects the OmniRoute provider
-and Responses API settings for that process only. List available models with:
+and Responses API settings for that process only. It also disables Codex web
+search for this temporary provider override because OmniRoute's Copilot
+Responses adapter requires a streaming-compatible request. List available
+models with:
 
 ```bash
 ./start-codex-omniroute.sh --list-models

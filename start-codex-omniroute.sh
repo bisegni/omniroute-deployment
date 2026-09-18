@@ -128,6 +128,10 @@ provider_args=(
   -c "model_providers.omniroute.env_key=$(toml_string OMNIROUTE_API_KEY)"
   -c "model_providers.omniroute.wire_api=$(toml_string responses)"
   -c "model_providers.omniroute.requires_openai_auth=false"
+  # OmniRoute converts Codex's web_search tool to a non-streaming response for
+  # Copilot, which breaks Codex's Responses streaming protocol. Keep it disabled
+  # for this temporary provider override; the user's Codex config is unchanged.
+  -c "web_search=$(toml_string disabled)"
 )
 
 if [[ -n "${codex_model}" ]]; then
