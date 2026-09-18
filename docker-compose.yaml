@@ -12,16 +12,17 @@ services:
   #       exec autossh -M 0 -N -o ExitOnForwardFailure=yes \
   #         -o StrictHostKeyChecking=accept-new \
   #         -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
-  #         -L 0.0.0.0:8443:${SLAC_API_HOSTNAME:-ai-api.slac.stanford.edu}:443 \
+  #         -L 0.0.0.0:8443:${TUNNELED_API_HOSTNAME:-ai-api.slac.stanford.edu}:443 \
   #         -o IdentitiesOnly=yes \
-  #         -i /ssh/s3df/SHA256:zUfE3xAHiPadt2p6QCGv3TQAIyqPDzZgW.jTD9cVTFw \
-  #         -F /ssh/config s3df
+  #         -i ${TUNNEL_SSH_IDENTITY_FILE:?set TUNNEL_SSH_IDENTITY_FILE in .env} \
+  #         -F ${TUNNEL_SSH_CONFIG:?set TUNNEL_SSH_CONFIG in .env} \
+  #         ${TUNNEL_SSH_HOST:?set TUNNEL_SSH_HOST in .env}
   #   volumes:
   #     - ~/.ssh:/ssh:ro
   #   networks:
   #     omniroute-net:
   #       aliases:
-  #         - ${SLAC_API_HOSTNAME:-ai-api.slac.stanford.edu}
+  #         - ${TUNNELED_API_HOSTNAME:-ai-api.slac.stanford.edu}
   #   restart: "no"
 
   omniroute:

@@ -4,7 +4,7 @@ Runs [OmniRoute](https://github.com/diegosouzapw/OmniRoute) as a local model
 router in front of two backends:
 
 - **SLAC** — your org's LiteLLM instance at the hostname in
-  `SLAC_API_HOSTNAME` (default: `ai-api.slac.stanford.edu`),
+  `TUNNELED_API_HOSTNAME` (default: `ai-api.slac.stanford.edu`),
   reached through an SSH tunnel (mirrors the `slac` provider in the main
   `gateway.yaml`).
 - **GitHub Copilot** — connected natively through OmniRoute's OAuth flow (no
@@ -16,9 +16,8 @@ talking to providers directly.
 ## Prerequisites
 
 - Docker + Docker Compose.
-- `~/.ssh/config` has a working `Host s3df` entry (same one `gateway.yaml`
-  uses for `ssh_tunnel.config_host`), with your key/agent already set up —
-  nothing extra to configure there.
+- `~/.ssh/config` has a working SSH host entry matching `TUNNEL_SSH_HOST` (the
+  example uses `s3df`), with your key/agent already set up.
 - Your SLAC bearer token, i.e. the contents of `~/.bedrock-api-key`.
 
 ## 1. Configure
@@ -45,8 +44,11 @@ Edit `.env`:
 | `OMNIROUTE_STORAGE_ENCRYPTION_KEY` | A long random string used to encrypt the SQLite data at rest. Keep it safe: losing it makes stored credentials unrecoverable. |
 | `OMNIROUTE_MACHINE_ID_SALT` | A unique random string for this deployment. |
 | `OMNIROUTE_WS_BRIDGE_SECRET` | A long random string for the Responses/WebSocket bridge. |
-| `SLAC_API_HOSTNAME` | SLAC LiteLLM hostname used by the optional SSH tunnel and TLS alias; default `ai-api.slac.stanford.edu`. |
-| `SLAC_API_KEY` | `cat ~/.bedrock-api-key` — paste the contents. |
+| `TUNNELED_API_HOSTNAME` | Upstream API hostname used by the optional SSH tunnel and TLS alias; default `ai-api.slac.stanford.edu`. |
+| `TUNNELED_API_KEY` | Upstream API key used when adding the tunneled provider; `cat ~/.bedrock-api-key` and paste the contents. |
+| `TUNNEL_SSH_IDENTITY_FILE` | Identity file path inside the tunnel container; the example uses the mounted `/ssh` tree. |
+| `TUNNEL_SSH_CONFIG` | SSH config path inside the tunnel container; default example `/ssh/config`. |
+| `TUNNEL_SSH_HOST` | SSH host entry from the mounted config; default example `s3df`. |
 
 Generate the five random values with `openssl rand -hex 32`. Do not rotate the
 storage-encryption key after the first start unless you have a migration plan.
@@ -58,11 +60,14 @@ docker compose up -d
 docker compose logs -f
 ```
 
-Check both containers came up:
+Check OmniRoute came up:
 
 ```bash
 docker compose ps
 ```
+
+If you enable the optional tunnel block, verify both `omniroute` and `tunnel`
+are running.
 
 If `tunnel` stops, check `docker compose logs tunnel` — usually this means
 `s3df` isn't resolvable/reachable from the container, or the mounted `~/.ssh`
@@ -99,12 +104,12 @@ ssh -N -L 20128:127.0.0.1:20128 <this-host>
 
 | Field | Value |
 |---|---|
-| Base URL | `https://<SLAC_API_HOSTNAME>:8443` |
-| API Key | value of `SLAC_API_KEY` (copy from `.env`) |
+| Base URL | `https://<TUNNELED_API_HOSTNAME>:8443` |
+| API Key | value of `TUNNELED_API_KEY` (copy from `.env`) |
 | TLS verify | on |
 
 The tunnel service has an internal Docker network alias matching
-`SLAC_API_HOSTNAME`. Use that hostname so the TLS SNI and certificate match
+`TUNNELED_API_HOSTNAME`. Use that hostname so the TLS SNI and certificate match
 while traffic is still routed to the tunnel container on port `8443`.
 
 ## 5. Connect GitHub Copilot
