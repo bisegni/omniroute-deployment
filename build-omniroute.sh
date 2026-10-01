@@ -7,6 +7,7 @@ source_branch="${OMNIROUTE_BRANCH:-${OMNIROUTE_REF:-release/v3.8.51}}"
 image_tag="${OMNIROUTE_IMAGE:-diegosouzapw/omniroute:3.8.51-local}"
 build_platform="${OMNIROUTE_PLATFORM:-linux/arm64}"
 build_target="${OMNIROUTE_BUILD_TARGET:-runner-base}"
+build_memory_mb="${OMNIROUTE_BUILD_MEMORY_MB:-}"
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 compose_env_file="${OMNIROUTE_COMPOSE_ENV_FILE:-${script_dir}/.env}"
 no_cache=false
@@ -24,13 +25,15 @@ Options:
   --platform VALUE   Docker platform (default: linux/arm64)
   --tag IMAGE        Local image tag (default: diegosouzapw/omniroute:3.8.51-local)
   --target TARGET    Docker target (default: runner-base)
+  --build-memory-mb MB  Node heap limit for the build (upstream default: 6144)
   --env-file FILE    Compose env file to update (default: .env next to this script)
   --no-cache         Build without Docker's layer cache
   -h, --help         Show this help
 
 Environment overrides:
   OMNIROUTE_REPO_URL, OMNIROUTE_BRANCH, OMNIROUTE_PLATFORM,
-  OMNIROUTE_IMAGE, OMNIROUTE_BUILD_TARGET, OMNIROUTE_COMPOSE_ENV_FILE
+  OMNIROUTE_IMAGE, OMNIROUTE_BUILD_TARGET, OMNIROUTE_BUILD_MEMORY_MB,
+  OMNIROUTE_COMPOSE_ENV_FILE
 EOF
 }
 
@@ -52,6 +55,10 @@ while (($# > 0)); do
       build_target="${2:?--target requires a Docker target}"
       shift 2
       ;;
+    --build-memory-mb)
+      build_memory_mb="${2:?--build-memory-mb requires a memory limit in MB}"
+      shift 2
+      ;;
     --env-file)
       compose_env_file="${2:?--env-file requires a Compose env file}"
       shift 2
@@ -71,6 +78,11 @@ while (($# > 0)); do
       ;;
   esac
 done
+
+if [[ -n "${build_memory_mb}" && ! "${build_memory_mb}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "--build-memory-mb must be a positive integer in MB" >&2
+  exit 2
+fi
 
 if [[ ! -f "${compose_env_file}" ]]; then
   echo "Compose env file not found: ${compose_env_file}" >&2
@@ -152,6 +164,10 @@ build_args=(
   --tag "${image_tag}"
   --load
 )
+
+if [[ -n "${build_memory_mb}" ]]; then
+  build_args+=(--build-arg "OMNIROUTE_BUILD_MEMORY_MB=${build_memory_mb}")
+fi
 
 if [[ "${no_cache}" == true ]]; then
   build_args+=(--no-cache)

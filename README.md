@@ -221,6 +221,14 @@ needed with `--branch`:
 ./build-omniroute.sh --branch release/v3.9.0
 ```
 
+If the Next.js build fails with `JavaScript heap out of memory`, increase the
+builder's Node heap limit (Docker must have enough memory available):
+
+```bash
+./build-omniroute.sh --branch release/v3.8.52 \
+  --tag diegosouzapw/omniroute:3.8.52-local --build-memory-mb 12288
+```
+
 After the build completes, start only OmniRoute when ready:
 
 ```bash
